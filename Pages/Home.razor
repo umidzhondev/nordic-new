@@ -1,0 +1,258 @@
+﻿@page "/"
+@using Nordic.Models
+@using Nordic.Services
+@using Nordic.Components
+@inject ProductService ProductService
+@inject CartService Cart
+@implements IDisposable
+
+<div class="min-h-screen bg-[#f7f4ee] text-[#2c2a29]">
+    
+    <!-- Header -->
+    <header class="border-b border-[#e5dfd3] bg-[#f7f4ee]/80 backdrop-blur-md sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <div @onclick="ResetAllFilters" class="flex items-baseline gap-3 cursor-pointer group select-none">
+                <h1
+                    class="text-2xl sm:text-3xl font-serif font-semibold tracking-wider text-[#2c2a29] group-hover:opacity-75 transition-opacity">
+                    NORDIC
+                </h1>
+                <span class="text-xs font-serif italic text-[#8c8275] hidden sm:inline">
+                    универсал магазин
+                </span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button @onclick="ToggleWishlistFilter"
+                        class="flex items-center gap-2 px-4 py-2 rounded-full border transition-all cursor-pointer text-xs font-medium @(showOnlyWishlist ? "bg-[#bd5d38] text-white border-[#bd5d38]" : "border-[#d8d0c1] text-[#2c2a29] hover:bg-[#eae4d8]")">
+                    <svg class="w-4 h-4 transition-colors @GetHeartSvgClass()" viewBox="0 0 24 24" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.684a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span>Избранное</span>
+                    <span class="@(showOnlyWishlist ? "text-white/80" : "text-[#8c8275]")">
+                        (@likedProductIds.Count)
+                    </span>
+                </button>
+
+                <button @onclick="() => isCartOpen = true"
+                        class="border border-[#2c2a29] px-4 py-2 rounded-full text-xs font-medium tracking-wide hover:bg-[#2c2a29] hover:text-[#f7f4ee] transition-all duration-300 flex items-center gap-2 cursor-pointer">
+                    <span>Корзина</span>
+                    <span class="bg-[#eae4d8] text-[#2c2a29] px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        @Cart.TotalCount
+                    </span>
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col lg:flex-row gap-12">
+            
+            <!-- Sidebar -->
+            <Sidebar SearchQuery="@searchQuery" OnSearchChanged="HandleSearchChange"
+                     SelectedCategory="@selectedCategory" OnCategorySelected="HandleCategoryChange"
+                     CategoryCounts="@CategoryCounts" SelectedSort="@selectedSort" OnSortChanged="HandleSortChange" />
+
+            <!-- Right Container -->
+            <div class="flex-1">
+                <!-- Top Bar Info -->
+                <div class="mb-6 flex items-center justify-between border-b border-[#e5dfd3] pb-4">
+                    @if (showOnlyWishlist)
+                    {
+                        <span class="text-xs font-serif text-[#8c8275]">
+                            Избранные товары: <strong class="text-[#2c2a29] font-normal">@FilteredProducts.Count</strong>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="text-xs font-serif text-[#8c8275]">
+                            Найдено товаров: <strong class="text-[#2c2a29] font-normal">@FilteredProducts.Count</strong>
+                        </span>
+                    }
+
+                    @if (showOnlyWishlist)
+                    {
+                        <span class="text-xs text-[#bd5d38] font-medium">
+                            Показаны только избранные товары
+                        </span>
+                    }
+                </div>
+
+                <!-- Empty State (Если список товаров пуст) -->
+                @if (!PaginatedProducts.Any())
+                {
+                    <div class="flex flex-col items-center justify-center py-20 text-center">
+                        <p class="text-sm font-serif text-[#8c8275] mb-4">
+                            По вашему запросу ничего не найдено.
+                        </p>
+                        <button @onclick="ResetAllFilters"
+                                class="text-xs font-serif font-semibold text-[#2c2a29] underline hover:text-[#bd5d38] transition-colors cursor-pointer">
+                            Показать все товары
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <!-- Grid товаров -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                        @foreach (var product in PaginatedProducts)
+                        {
+                            <ProductCard Product="product" IsLiked="@likedProductIds.Contains(product.Id)"
+                                         OnToggleLike="ToggleLikeProduct" OnAddToCart="(p) => Cart.AddToCart(p)" />
+                        }
+                    </div>
+
+                    <!-- Пагинация -->
+                    <Pagination CurrentPage="@currentPage" TotalPages="@TotalPages" OnPageChanged="HandlePageChange" />
+                }
+            </div>
+
+        </div>
+    </main>
+
+    <CartModal IsOpen="isCartOpen" IsOpenChanged="(val) => isCartOpen = val" />
+</div>
+
+@code {
+    private List<Product> allProducts = new();
+    private HashSet<int> likedProductIds = new();
+    
+    private string searchQuery = "";
+    private string selectedCategory = "Все";
+    private string selectedSort = "featured";
+    
+    private bool showOnlyWishlist = false;
+    private bool isCartOpen = false;
+
+    private int currentPage = 1;
+    private const int PageSize = 8;
+
+    protected override void OnInitialized()
+    {
+        allProducts = ProductService.GetProducts();
+        Cart.OnChange += StateHasChanged;
+    }
+
+    private void ToggleWishlistFilter()
+    {
+        showOnlyWishlist = !showOnlyWishlist;
+        currentPage = 1;
+    }
+
+    private void ToggleLikeProduct(int productId)
+    {
+        if (likedProductIds.Contains(productId))
+            likedProductIds.Remove(productId);
+        else
+            likedProductIds.Add(productId);
+
+        currentPage = 1;
+    }
+
+    private void HandleCategoryChange(string category)
+    {
+        selectedCategory = category;
+        showOnlyWishlist = false; // Сбрасываем фильтр "Избранное" при клике на категорию
+        currentPage = 1;
+    }
+
+    private void HandleSearchChange(string query)
+    {
+        searchQuery = query;
+        showOnlyWishlist = false; // Сбрасываем фильтр "Избранное" при поиске
+        currentPage = 1;
+    }
+
+    private void HandleSortChange(string sort)
+    {
+        selectedSort = sort;
+        currentPage = 1;
+    }
+
+    private void HandlePageChange(int page)
+    {
+        currentPage = page;
+    }
+    private void ResetAllFilters()
+    {
+        searchQuery = "";
+        selectedCategory = "Все";
+        selectedSort = "featured";
+        showOnlyWishlist = false;
+        currentPage = 1;
+    }
+
+    private string GetHeartSvgClass()
+    {
+        if (showOnlyWishlist || likedProductIds.Count > 0)
+        {
+            return showOnlyWishlist ? "fill-white stroke-white" : "fill-[#bd5d38] stroke-[#bd5d38]";
+        }
+        return "fill-none stroke-[#2c2a29]";
+    }
+
+    private List<Product> FilteredProducts
+    {
+        get
+        {
+            var query = allProducts.AsEnumerable();
+
+            if (showOnlyWishlist)
+            {
+                query = query.Where(p => likedProductIds.Contains(p.Id));
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                query = query.Where(p => p.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (selectedCategory != "Все")
+            {
+                query = query.Where(p => p.Category == selectedCategory);
+            }
+
+            return selectedSort switch
+            {
+                "price-asc" => query.OrderBy(p => p.Price).ToList(),
+                "price-desc" => query.OrderByDescending(p => p.Price).ToList(),
+                "rating" => query.OrderByDescending(p => p.Rating).ToList(),
+                _ => query.ToList()
+            };
+        }
+    }
+
+    private List<Product> PaginatedProducts
+    {
+        get
+        {
+            return FilteredProducts
+                .Skip((currentPage - 1) * PageSize)
+                .Take(PageSize)
+                .ToList();
+        }
+    }
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredProducts.Count / PageSize);
+
+    private Dictionary<string, int> CategoryCounts
+    {
+        get
+        {
+            var dict = new Dictionary<string, int> { { "Все", allProducts.Count } };
+            foreach (var cat in ProductService.Categories.Where(c => c != "Все"))
+            {
+                dict[cat] = allProducts.Count(p => p.Category == cat);
+            }
+            return dict;
+        }
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
+    }
+}

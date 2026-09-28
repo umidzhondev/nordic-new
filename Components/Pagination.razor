@@ -1,0 +1,42 @@
+@if (TotalPages > 1)
+{
+    <div class="flex items-center justify-center gap-2 mt-12">
+        <!-- Prev -->
+        <button @onclick="() => ChangePage(CurrentPage - 1)"
+                disabled="@(CurrentPage == 1)"
+                class="w-9 h-9 rounded-full border border-[#d8d0c1] flex items-center justify-center text-xs text-[#2c2a29] hover:bg-[#eae4d8] disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer">
+            ‹
+        </button>
+
+        <!-- Pages -->
+        @for (int i = 1; i <= TotalPages; i++)
+        {
+            var pageNum = i;
+            <button @onclick="() => ChangePage(pageNum)"
+                    class="w-9 h-9 rounded-full text-xs font-serif font-medium transition-all cursor-pointer @(CurrentPage == pageNum ? "bg-[#2c2a29] text-[#f7f4ee]" : "border border-[#d8d0c1] text-[#2c2a29] hover:bg-[#eae4d8]")">
+                @pageNum
+            </button>
+        }
+
+        <!-- Next -->
+        <button @onclick="() => ChangePage(CurrentPage + 1)"
+                disabled="@(CurrentPage == TotalPages)"
+                class="w-9 h-9 rounded-full border border-[#d8d0c1] flex items-center justify-center text-xs text-[#2c2a29] hover:bg-[#eae4d8] disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer">
+            ›
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+
+    private async Task ChangePage(int newPage)
+    {
+        if (newPage >= 1 && newPage <= TotalPages)
+        {
+            await OnPageChanged.InvokeAsync(newPage);
+        }
+    }
+}
