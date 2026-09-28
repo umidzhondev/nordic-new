@@ -1,4 +1,4 @@
 bin/
 obj/
-.vs/
-.idea/
+output/
+node_modules/
