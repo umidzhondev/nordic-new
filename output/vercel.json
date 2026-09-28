@@ -1,5 +1,5 @@
 {
-  "cleanUrls": true,
+  "outputDirectory": "output/wwwroot",
   "rewrites": [
     {
       "source": "/((?!.*\\.).*)",
