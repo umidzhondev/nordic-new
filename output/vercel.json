@@ -1,9 +1,0 @@
-{
-  "outputDirectory": "output/wwwroot",
-  "rewrites": [
-    {
-      "source": "/((?!.*\\.).*)",
-      "destination": "/index.html"
-    }
-  ]
-}
