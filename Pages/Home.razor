@@ -101,7 +101,8 @@
                         @foreach (var product in PaginatedProducts)
                         {
                             <ProductCard Product="product" IsLiked="@likedProductIds.Contains(product.Id)"
-                                         OnToggleLike="ToggleLikeProduct" OnAddToCart="(p) => Cart.AddToCart(p)" />
+                                         OnToggleLike="ToggleLikeProduct" OnAddToCart="(p) => Cart.AddToCart(p)"
+                                         OnQuickView="OpenQuickViewModal" /> <!-- Mana shu qator qo'shildi -->
                         }
                     </div>
 
@@ -114,6 +115,11 @@
     </main>
 
     <CartModal IsOpen="isCartOpen" IsOpenChanged="(val) => isCartOpen = val" />
+    <CartModal IsOpen="isCartOpen" IsOpenChanged="(val) => isCartOpen = val" />
+
+    <QuickViewModal Product="selectedProduct" IsOpen="isQuickViewOpen"
+                    IsOpenChanged="@((bool val) => isQuickViewOpen = val)" />
+    
 </div>
 
 @code {
@@ -254,5 +260,15 @@
     public void Dispose()
     {
         Cart.OnChange -= StateHasChanged;
+    }
+
+    private Product? selectedProduct;
+    private bool isQuickViewOpen = false;
+
+    private void OpenQuickViewModal(Product product)
+    {
+        selectedProduct = product;
+        isQuickViewOpen = true;
+        StateHasChanged();
     }
 }

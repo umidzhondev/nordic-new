@@ -2,7 +2,7 @@
 @using Nordic.Services
 @inject CartService Cart
 
-@if (Product != null)
+@if (Product != null && IsOpen)
 {
     <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <!-- Backdrop -->
@@ -49,6 +49,8 @@
 }
 
 @code {
+    [Parameter] public bool IsOpen { get; set; } // <--- Mana bu juda muhim!
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
     [Parameter] public Product? Product { get; set; }
     [Parameter] public EventCallback<Product?> ProductChanged { get; set; }
 
@@ -56,6 +58,7 @@
     {
         Product = null;
         await ProductChanged.InvokeAsync(null);
+        await IsOpenChanged.InvokeAsync(false);
     }
 
     private async Task AddToCartAndClose()

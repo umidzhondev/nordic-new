@@ -78,7 +78,6 @@
         </div>
     </div>
 }
-
 @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
@@ -97,6 +96,9 @@
 
     private async Task OnCheckout()
     {
+        // 1. Корzinadagi mahsulotlarni tozalash (CartService'dagi metod nomi turlicha bo'lishi mumkin: Clear, ClearCart yoki Items.Clear)
+        Cart.ClearCart(); // yoki Cart.ClearCart();
+
         await Close();
         await OnCheckoutRequested.InvokeAsync();
     }
